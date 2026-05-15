@@ -54,7 +54,7 @@ metadata:
   name: api
   namespace: devops-lab
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: api
   ports:
