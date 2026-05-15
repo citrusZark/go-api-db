@@ -52,6 +52,10 @@ func main() {
 		fmt.Fprintln(w, "db ok")
 	})
 
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "version 2")
+	})
+
 	log.Println("listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
