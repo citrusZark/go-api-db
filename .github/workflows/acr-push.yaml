@@ -1,10 +1,11 @@
-# Lab 4: build Go API image and push to Alibaba Cloud Container Registry (ACR)
+# Lab 4: build and push to ACR Personal Edition
 #
-# Required GitHub repository secrets:
-#   ALIYUN_ACCESS_KEY_ID
-#   ALIYUN_ACCESS_KEY_SECRET
+# Personal Edition does NOT support GetAuthorizationToken (AccessKey via acr-login).
+# Use registry username + Docker login password from Access Credential.
 #
-# Set env REGISTRY / REGION / NAMESPACE to match your ACR console (see LAB-4.md).
+# GitHub Secrets:
+#   ACR_USERNAME   e.g. thoha1@569647806.onaliyun.com
+#   ACR_PASSWORD   Registry password (Access Credential → Set Password), NOT RAM secret
 
 name: Build and push to ACR
 
@@ -14,7 +15,6 @@ on:
   workflow_dispatch:
 
 env:
-  # Personal Edition — ap-southeast-1 (Singapore); copy REGISTRY from Access Credential
   REGION: ap-southeast-1
   REGISTRY: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com
   NAMESPACE: devops-lab-scark
@@ -36,13 +36,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Log in to ACR
-        uses: aliyun/acr-login@v1
-        with:
-          login-server: ${{ env.REGISTRY }}
-          region-id: ${{ env.REGION }}
-          access-key-id: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
-          access-key-secret: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+      - name: Log in to ACR (Personal Edition)
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            --username="${{ secrets.ACR_USERNAME }}" \
+            --password-stdin \
+            "${{ env.REGISTRY }}"
 
       - name: Build and push image
         env:
