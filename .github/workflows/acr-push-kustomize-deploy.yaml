@@ -1,0 +1,104 @@
+# Lab 12: build, push to ACR, then deploy to ACK with Kustomize.
+#
+# This workflow intentionally preserves the older acr-push.yaml workflow.
+# It is manual-only while learning so both workflows do not run on every push.
+#
+# GitHub Secrets:
+#   ACR_USERNAME
+#   ACR_PASSWORD
+#   ACK_KUBECONFIG_B64
+
+name: Build, push, and deploy with Kustomize
+
+on:
+  workflow_dispatch:
+
+env:
+  REGION: ap-southeast-5
+  REGISTRY: crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com
+  NAMESPACE: devops-lab
+  IMAGE_NAME: go-api-db
+  KUBE_NAMESPACE: devops-lab
+  KUBE_DEPLOYMENT: api
+  KUSTOMIZE_OVERLAY: k8s/overlays/dev
+  # This is the image name currently written in the Kustomize base/overlay.
+  # Kustomize uses it as the match key before replacing it with REGISTRY/NAMESPACE/IMAGE_NAME:github.sha.
+  KUSTOMIZE_IMAGE_NAME: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      tag: ${{ steps.image.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Log in to ACR (Personal Edition)
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            --username="${{ secrets.ACR_USERNAME }}" \
+            --password-stdin \
+            "${{ env.REGISTRY }}"
+
+      - name: Prepare image values
+        id: image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        run: |
+          docker build -t "${{ steps.image.outputs.image }}:${{ steps.image.outputs.tag }}" .
+          docker push "${{ steps.image.outputs.image }}:${{ steps.image.outputs.tag }}"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          printf '%s' "${{ secrets.ACK_KUBECONFIG_B64 }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Set Kustomize image
+        run: |
+          kustomize edit set image \
+            "${{ env.KUSTOMIZE_IMAGE_NAME }}=${{ needs.build-and-push.outputs.image }}:${{ needs.build-and-push.outputs.tag }}"
+        working-directory: ${{ env.KUSTOMIZE_OVERLAY }}
+
+      - name: Preview rendered manifests
+        run: kustomize build "${{ env.KUSTOMIZE_OVERLAY }}"
+
+      - name: Deploy to ACK
+        run: |
+          kustomize build "${{ env.KUSTOMIZE_OVERLAY }}" | kubectl apply -f -
+          kubectl -n "${{ env.KUBE_NAMESPACE }}" rollout status \
+            deploy/${{ env.KUBE_DEPLOYMENT }}
+
+      - name: Show deployed image
+        run: |
+          kubectl -n "${{ env.KUBE_NAMESPACE }}" get deploy "${{ env.KUBE_DEPLOYMENT }}" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
