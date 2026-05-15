@@ -19,6 +19,9 @@ env:
   REGISTRY: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com
   NAMESPACE: devops-lab-scark
   IMAGE_NAME: go-api-db
+  KUBE_NAMESPACE: devops-lab
+  KUBE_DEPLOYMENT: api
+  KUBE_CONTAINER: api
 
 jobs:
   build-and-push:
@@ -49,3 +52,24 @@ jobs:
         run: |
           docker build -t "${IMAGE}:${{ github.sha }}" .
           docker push "${IMAGE}:${{ github.sha }}"
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.ACK_KUBECONFIG_B64 }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Deploy to ACK
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          kubectl -n "${{ env.KUBE_NAMESPACE }}" set image \
+            deploy/${{ env.KUBE_DEPLOYMENT }} \
+            ${{ env.KUBE_CONTAINER }}="${IMAGE}"
+          kubectl -n "${{ env.KUBE_NAMESPACE }}" rollout status \
+            deploy/${{ env.KUBE_DEPLOYMENT }}
+
+      - name: Show deployed image
+        run: |
+          kubectl -n "${{ env.KUBE_NAMESPACE }}" get deploy "${{ env.KUBE_DEPLOYMENT }}" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
