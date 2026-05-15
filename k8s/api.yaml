@@ -1,6 +1,8 @@
-# Replace IMAGE_TAG with your CI SHA (or "local" from laptop push).
-# Example image:
-# crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com/devops-lab/go-api-db:abc1234
+# Set image tag via env or sed before apply:
+#   export IMAGE_TAG=$(git rev-parse HEAD)   # CI SHA — same as Actions
+#   sed "s/REPLACE_TAG/$IMAGE_TAG/g" api.yaml | kubectl apply -f -
+#
+# Registry must match Lab 4 (.github/workflows/acr-push.yaml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,9 +18,11 @@ spec:
       labels:
         app: api
     spec:
+      imagePullSecrets:
+        - name: acr-secret
       containers:
         - name: api
-          image: crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com/devops-lab/go-api-db:REPLACE_TAG
+          image: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db:075c3e07903d73443f7cd5f199322c19fc6aa666
           ports:
             - containerPort: 8080
           env:
