@@ -14,9 +14,9 @@ on:
   workflow_dispatch:
 
 env:
-  REGION: ap-southeast-5
-  REGISTRY: crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com
-  NAMESPACE: devops-lab
+  REGION: ap-southeast-1
+  REGISTRY: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com
+  NAMESPACE: devops-lab-scark
   IMAGE_NAME: go-api-db
   KUBE_NAMESPACE: devops-lab
   KUBE_DEPLOYMENT: api
