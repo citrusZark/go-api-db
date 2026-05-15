@@ -37,7 +37,7 @@ jobs:
         run: go vet ./...
 
       - name: Log in to ACR
-        uses: aliyun/acr-login@v2
+        uses: aliyun/acr-login@v1
         with:
           login-server: ${{ env.REGISTRY }}
           region-id: ${{ env.REGION }}
