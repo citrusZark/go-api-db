@@ -45,7 +45,11 @@ jobs:
             --username="${{ secrets.ACR_USERNAME }}" \
             --password-stdin \
             "${{ env.REGISTRY }}"
-
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
       - name: Build and push image
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
