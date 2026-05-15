@@ -1,0 +1,58 @@
+# Replace IMAGE_TAG with your CI SHA (or "local" from laptop push).
+# Example image:
+# crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com/devops-lab/go-api-db:abc1234
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: devops-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: crpi-8ws1uo2xdd0xw89k.ap-southeast-5.personal.cr.aliyuncs.com/devops-lab/go-api-db:REPLACE_TAG
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: postgres://app:app@db.devops-lab.svc.cluster.local:5432/app?sslmode=disable
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: devops-lab
+spec:
+  type: LoadBalancer
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080

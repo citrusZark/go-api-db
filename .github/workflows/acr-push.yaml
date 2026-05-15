@@ -1,0 +1,52 @@
+# Lab 4: build Go API image and push to Alibaba Cloud Container Registry (ACR)
+#
+# Required GitHub repository secrets:
+#   ALIYUN_ACCESS_KEY_ID
+#   ALIYUN_ACCESS_KEY_SECRET
+#
+# Set env REGISTRY / REGION / NAMESPACE to match your ACR console (see LAB-4.md).
+
+name: Build and push to ACR
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  # Personal Edition — ap-southeast-1 (Singapore); copy REGISTRY from Access Credential
+  REGION: ap-southeast-1
+  REGISTRY: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com
+  NAMESPACE: devops-lab-scark
+  IMAGE_NAME: go-api-db
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Log in to ACR
+        uses: aliyun/acr-login@v2
+        with:
+          login-server: ${{ env.REGISTRY }}
+          region-id: ${{ env.REGION }}
+          access-key-id: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
+        run: |
+          docker build -t "${IMAGE}:${{ github.sha }}" .
+          docker push "${IMAGE}:${{ github.sha }}"
