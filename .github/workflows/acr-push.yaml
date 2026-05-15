@@ -45,11 +45,7 @@ jobs:
             --username="${{ secrets.ACR_USERNAME }}" \
             --password-stdin \
             "${{ env.REGISTRY }}"
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
+
       - name: Build and push image
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
@@ -57,6 +53,11 @@ jobs:
           docker build -t "${IMAGE}:${{ github.sha }}" .
           docker push "${IMAGE}:${{ github.sha }}"
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
       - name: Set up kubeconfig
         run: |
           mkdir -p "$HOME/.kube"
