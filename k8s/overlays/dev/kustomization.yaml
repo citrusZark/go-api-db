@@ -7,4 +7,4 @@ resources:
 images:
 - name: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
   newName: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
-  newTag: d640d562343d449a57929a92c1b2ad9d196b491c
+  newTag: 546f74cf068e6568c0a8299573183da761eea10e
