@@ -2,8 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base
+- ../../base
 
 images:
-  - name: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
-    newTag: e02f0fb399fb4ede0949431eb4eac6dd1a7ce079
+- name: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
+  newName: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
+  newTag: 4df8f5e11f21159f9b35a24dcd46e500e73c792b
