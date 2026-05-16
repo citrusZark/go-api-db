@@ -90,18 +90,18 @@ jobs:
             commit -m "Update dev image tag to ${{ github.sha }}"
           git push -u origin "${BRANCH_NAME}"
 
+          cat > /tmp/pr-body.md <<'EOF'
+          ## Summary
+          - Updates the dev Kustomize image tag to the image built from this commit.
+          - Argo CD will sync the change after this PR is merged to `main`.
+
+          ## Test plan
+          - GitHub Actions built and pushed the image to ACR.
+          - Review the Kustomize tag diff before merging.
+          EOF
+
           gh pr create \
             --base main \
             --head "${BRANCH_NAME}" \
             --title "Update dev image tag to ${{ github.sha }}" \
-            --body "$(cat <<'EOF'
-## Summary
-- Updates the dev Kustomize image tag to the image built from this commit.
-- Argo CD will sync the change after this PR is merged to `main`.
-
-## Test plan
-- GitHub Actions built and pushed the image to ACR.
-- Review the Kustomize tag diff before merging.
-
-EOF
-)"
+            --body-file /tmp/pr-body.md
