@@ -1,20 +1,25 @@
-# Lab 15: build and push to ACR, then update the Kustomize image tag in Git.
+# Lab 16: build and push to ACR, then open a PR that updates the Kustomize image tag.
 #
-# This is the GitOps flow:
-#   GitHub Actions builds the image and commits the new tag to Git.
-#   Argo CD notices the Git change and syncs the cluster.
+# This is the safer GitOps flow:
+#   GitHub Actions builds the image and opens a PR with the new tag.
+#   A human reviews and merges the PR.
+#   Argo CD notices the Git change on main and syncs the cluster.
 #
 # GitHub Secrets:
 #   ACR_USERNAME
 #   ACR_PASSWORD
 
-name: Build, push, and update GitOps tag
+name: Build, push, and open GitOps PR
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - k8s/overlays/dev/kustomization.yaml
 
 permissions:
   contents: write
+  pull-requests: write
 
 env:
   REGION: ap-southeast-1
@@ -25,7 +30,7 @@ env:
   KUSTOMIZE_IMAGE_NAME: crpi-fhpva5vbhc90jggd.ap-southeast-1.personal.cr.aliyuncs.com/devops-lab-scark/go-api-db
 
 jobs:
-  build-push-update-git:
+  build-push-open-pr:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -68,15 +73,35 @@ jobs:
       - name: Show GitOps manifest diff
         run: git diff -- "${{ env.KUSTOMIZE_OVERLAY }}/kustomization.yaml"
 
-      - name: Commit and push image tag
+      - name: Open image tag pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: gitops/update-image-${{ github.sha }}
         run: |
           if git diff --quiet -- "${{ env.KUSTOMIZE_OVERLAY }}/kustomization.yaml"; then
-            echo "Kustomize image tag already matches ${{ github.sha }}; nothing to commit."
+            echo "Kustomize image tag already matches ${{ github.sha }}; no PR needed."
             exit 0
           fi
 
+          git checkout -b "${BRANCH_NAME}"
           git add "${{ env.KUSTOMIZE_OVERLAY }}/kustomization.yaml"
           git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "Update dev image tag to ${{ github.sha }}"
-          git push
+          git push -u origin "${BRANCH_NAME}"
+
+          gh pr create \
+            --base main \
+            --head "${BRANCH_NAME}" \
+            --title "Update dev image tag to ${{ github.sha }}" \
+            --body "$(cat <<'EOF'
+## Summary
+- Updates the dev Kustomize image tag to the image built from this commit.
+- Argo CD will sync the change after this PR is merged to `main`.
+
+## Test plan
+- GitHub Actions built and pushed the image to ACR.
+- Review the Kustomize tag diff before merging.
+
+EOF
+)"
